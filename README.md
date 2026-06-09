@@ -1,7 +1,7 @@
 
 # AutoRAG: Semantic Intelligence for Automotive Research
 
-A production-grade Retrieval-Augmented Generation system for analyzing 
+ Retrieval-Augmented Generation system for analyzing 
 automotive and electric vehicle research papers.
 
 **Ask intelligent questions. Get grounded answers with citations.**
