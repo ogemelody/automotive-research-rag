@@ -177,13 +177,3 @@ class TextCleaner:
             'signals': quality_signals,
             'issues_found': self.issues_found
         }
-
-
-# Usage
-cleaner = TextCleaner()
-cleaned = cleaner.clean_paper(raw_text)
-quality = cleaner.estimate_quality(cleaned)
-
-if quality['quality_score'] < 0.5:
-    logger.warning(f"Low quality extraction: {quality['status']}")
-    # Could flag for manual review
