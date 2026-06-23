@@ -2,3 +2,12 @@ pdfplumber
 pymupdf
 pytesseract
 pandas
+chromadb
+sentence-transformers
+torch
+spacy
+Pillow
+numpy
+anthropic
+python-dotenv
+
