@@ -232,9 +232,3 @@ class PDFExtractor:
         ))
 
         return output_data
-
-
-# Usage
-extractor = PDFExtractor()
-metadata = {"title": "Battery Thermal Management", "year": 2023}
-result = extractor.extract_pdf("papers/battery_thermal.pdf", metadata)
