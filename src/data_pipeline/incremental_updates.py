@@ -1,10 +1,11 @@
-
-
 import json
+import logging
 from pathlib import Path
+from typing import Dict, List
 import hashlib
 from datetime import datetime
-import pandas as pd
+
+logger = logging.getLogger(__name__)
 
 
 class IncementalPipelineManager:
@@ -65,19 +66,3 @@ class IncementalPipelineManager:
         """Get all papers that need processing"""
         pdfs = list(papers_dir.glob('*.pdf'))
         return [p for p in pdfs if self.should_reprocess(p)]
-
-
-# Usage in pipeline
-manager = IncementalPipelineManager()
-
-papers_dir = Path("data/raw/papers")
-for pdf_path in papers_dir.glob('*.pdf'):
-    if manager.should_reprocess(pdf_path):
-        # Process paper
-        result = extract_and_chunk(pdf_path)
-        manager.mark_processed(pdf_path, len(result['chunks']))
-    else:
-        # Already processed, skip
-        logger.info(f"Skipping {pdf_path.name}")
-
-# This way, adding 1 new paper only processes that paper
