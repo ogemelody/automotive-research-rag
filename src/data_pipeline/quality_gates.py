@@ -1,4 +1,8 @@
 # src/data_pipeline/quality_gates.py
+import logging
+
+logger = logging.getLogger(__name__)
+
 
 class QualityGates:
     """Enforce quality standards at each stage"""
@@ -27,29 +31,10 @@ class QualityGates:
     @staticmethod
     def gate_chunking(chunks) -> bool:
         min_chunk_size = 300  # tokens
-        valid_chunks = sum(1 for c in chunks if c['token_count'] >= min_chunk_size)
+        valid_chunks = sum(1 for c in chunks if c.token_count >= min_chunk_size)
         valid_ratio = valid_chunks / len(chunks)
 
         if valid_ratio < QualityGates.CHUNKING_THRESHOLD:
             logger.warning(f"Too many small chunks: {valid_ratio:.1%} valid")
             return False
         return True
-
-
-# Usage in pipeline
-if not QualityGates.gate_extraction(extraction_result):
-    logger.error("Paper failed extraction quality gate")
-    # Option 1: Use OCR
-    # Option 2: Flag for manual review
-    # Option 3: Skip paper
-    continue
-
-if not QualityGates.gate_cleaning(cleaning_quality):
-    logger.error("Paper failed cleaning quality gate")
-    # Investigate: Why is extracted text so bad?
-    continue
-
-if not QualityGates.gate_chunking(chunks):
-    logger.error("Paper failed chunking quality gate")
-    # Adjust chunk size and retry
-    continue
