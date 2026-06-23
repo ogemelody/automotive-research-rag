@@ -1,4 +1,8 @@
+import sys
+from pathlib import Path
+sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 
+import json
 
 from src.data_pipeline.pdf_extractor import PDFExtractor
 from src.data_pipeline.text_cleaner import TextCleaner
@@ -9,6 +13,7 @@ from src.data_pipeline.incremental_updates import IncementalPipelineManager
 from src.data_pipeline.quality_gates import QualityGates
 import pandas as pd
 import logging
+
 
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
@@ -37,7 +42,7 @@ def run_full_pipeline():
     pipeline_results = []
 
     # Process papers
-    for idx, row in papers_df.iterrows():
+    for idx, (_, row) in enumerate(papers_df.iterrows()):
         paper_id = row['filename'].replace('.pdf', '')
         pdf_path = Path("data/raw/papers") / row['filename']
 
@@ -76,17 +81,20 @@ def run_full_pipeline():
 
         # STAGE 4: Embeddings
         logger.info("  → Generating embeddings...")
-        chunk_dicts = [c.to_dict() for c in chunks]
-        embeddings = embedding_gen.embed_batch([c['content'] for c in chunk_dicts])
+        texts = [c.content for c in chunks]
+        ids = [c.chunk_id for c in chunks]
+        metadatas = [{"paper_id": c.paper_id, "token_count": c.token_count} for c in chunks]
+        embeddings = embedding_gen.embed_batch(texts)
 
         # STAGE 5: Store in Vector DB
         logger.info("  → Storing in database...")
-        vector_db.add_chunks(chunk_dicts, embeddings)
+        vector_db.add_chunks(texts, ids, embeddings.tolist(), metadatas)
 
         # Mark as processed
         update_manager.mark_processed(pdf_path, len(chunks))
-        all_chunks.extend(chunk_dicts)
 
+        all_chunks.extend([{"content": t, "id": i, "metadata": m}
+                           for t, i, m in zip(texts, ids, metadatas)])
         pipeline_results.append({
             'paper_id': paper_id,
             'stage': 'complete',
@@ -103,19 +111,12 @@ def run_full_pipeline():
     logger.info(f"{'=' * 60}")
     logger.info(f"Total papers processed: {len([r for r in pipeline_results if r['status'] == 'success'])}")
     logger.info(f"Total chunks created: {len(all_chunks)}")
-    logger.info(f"Vector DB status: {vector_db.get_collection_info()}")
+    logger.info(f"Vector DB total chunks: {vector_db.count()}")
 
     # Save results
     results_df = pd.DataFrame(pipeline_results)
     results_df.to_csv("data/pipeline_results.csv", index=False)
-
-    # Create and save manifest
-    manifest = create_data_manifest(papers_df, all_chunks, embedding_gen)
-    with open("data/data_manifest.json", 'w') as f:
-        json.dump(manifest, f, indent=2)
-
     logger.info(f"Results saved: data/pipeline_results.csv")
-    logger.info(f"Manifest saved: data/data_manifest.json")
 
 
 if __name__ == "__main__":
