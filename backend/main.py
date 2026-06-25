@@ -1,30 +1,25 @@
 import sys
 import os
 from pathlib import Path
-from dotenv import load_dotenv  # ADD THIS LINE
+from dotenv import load_dotenv
 import time
 from datetime import datetime
+import requests
 
-# Load .env file
-load_dotenv()  # ADD THIS LINE
+load_dotenv()
 
-# Add parent directory to path
 sys.path.insert(0, str(Path(__file__).parent.parent))
 
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
 from typing import List
-from anthropic import Anthropic
 
-# Import YOUR actual modules
 from src.embeddings.generate_embeddings import EmbeddingGenerator
 from src.embeddings.chroma_setup import ChromaVectorDB
 
-# Initialize FastAPI
 app = FastAPI(title="AutoRAG API", version="1.0.0")
 
-# Enable CORS
 app.add_middleware(
     CORSMiddleware,
     allow_origins=["http://localhost:3000", "http://127.0.0.1:3000"],
@@ -33,24 +28,14 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-# Load components
 print("Loading embeddings model...")
 embedding_gen = EmbeddingGenerator()
 
 print("Loading vector database...")
 vector_db = ChromaVectorDB()
 
-print("Initializing Claude API...")
-api_key = os.getenv("ANTHROPIC_API_KEY")  # CHANGED THIS
-if not api_key:
-    print("⚠️  WARNING: ANTHROPIC_API_KEY not found in .env file")
-    print("Please create .env with: ANTHROPIC_API_KEY=sk-ant-...")
-claude = Anthropic(api_key=api_key)  # CHANGED THIS
+print("✅ All components ready! Using LOCAL Ollama for answers")
 
-print("✅ All components ready!")
-
-
-# ============ DATA MODELS ============
 
 class QueryRequest(BaseModel):
     question: str
@@ -94,45 +79,77 @@ class StatsResponse(BaseModel):
     total_papers: int
     indexed_at: str
     status: str
+    llm: str
 
 
-# ============ ROUTES ============
+def generate_answer_with_ollama(question: str, context: str) -> str:
+    """Generate answer using local Ollama"""
+
+    prompt = f"""You are an expert automotive engineer analyzing research papers.
+
+Based on these research excerpts, answer the following question.
+
+QUESTION: {question}
+
+RESEARCH EXCERPTS:
+{context}
+
+Answer based ONLY on the excerpts provided. Be precise and technical. Cite sources using [Source N] format."""
+
+    try:
+        response = requests.post(
+            'http://localhost:11434/api/generate',
+            json={
+                "model": "mistral",
+                "prompt": prompt,
+                "stream": False,
+                "temperature": 0.7
+            },
+            timeout=120
+        )
+
+        if response.status_code == 200:
+            return response.json()["response"]
+        else:
+            return f"Error: Ollama returned {response.status_code}"
+    except requests.exceptions.ConnectionError:
+        return "❌ ERROR: Ollama not running. Please run 'ollama run mistral' in another terminal"
+    except Exception as e:
+        return f"❌ Error: {str(e)}"
+
 
 @app.get("/")
 async def root():
-    """Health check"""
     return {
         "name": "AutoRAG API",
         "status": "running",
-        "version": "1.0.0"
+        "version": "1.0.0",
+        "llm": "Local Ollama (FREE)"
     }
 
 
 @app.get("/stats")
 async def get_stats():
-    """Get system statistics"""
     return StatsResponse(
         total_papers=vector_db.count(),
         indexed_at=datetime.now().isoformat(),
-        status="ready"
+        status="ready",
+        llm="Ollama Mistral (Local)"
     )
 
 
 @app.post("/query", response_model=QueryResponse)
 async def query(req: QueryRequest):
-    """Execute RAG query using YOUR actual code"""
+    """Execute RAG query with local Ollama"""
     start_time = time.time()
 
     try:
-        # Step 1: Embed the question
         print(f"Embedding question: {req.question}")
         question_embedding = embedding_gen.embed_text(req.question)
 
-        # Step 2: Search Chroma
         print("Searching Chroma vector database...")
         search_results = vector_db.query(question_embedding, n_results=req.top_k)
 
-        # Step 3: Format retrieved chunks
         if not search_results or not search_results.get('ids'):
             answer = "No relevant papers found."
             sources = []
@@ -144,37 +161,21 @@ async def query(req: QueryRequest):
                     search_results['documents'][0],
                     search_results['distances'][0]
             ):
-                relevance = 1 / (1 + distance)  # Convert distance to similarity
+                relevance = 1 / (1 + distance)
                 results.append({
                     'chunk_id': chunk_id,
                     'document': doc,
                     'relevance': relevance
                 })
 
-            # Step 4: Build context for Claude
             context_text = "\n\n".join([
                 f"[Source {i + 1}]\n{r['document']}"
                 for i, r in enumerate(results)
             ])
 
-            # Step 5: Generate answer with Claude
-            print("Generating answer with Claude...")
-            response = claude.messages.create(
-                model="claude-opus-4-6",
-                max_tokens=1500,
-                system="""You are an expert automotive engineer analyzing research papers.
-Answer based ONLY on the provided research excerpts.
-Cite sources using [Source N] format.
-Be precise and technical.""",
-                messages=[{
-                    "role": "user",
-                    "content": f"Based on these research excerpts, answer: {req.question}\n\nRESEARCH EXCERPTS:\n{context_text}"
-                }]
-            )
+            print("Generating answer with LOCAL Ollama...")
+            answer = generate_answer_with_ollama(req.question, context_text)
 
-            answer = response.content[0].text
-
-            # Format sources for response
             sources = [
                 Source(
                     id=r['chunk_id'],
@@ -185,9 +186,7 @@ Be precise and technical.""",
                 for r in results
             ]
 
-        # Step 6: Build knowledge graph
         graph = build_knowledge_graph(results)
-
         latency = (time.time() - start_time) * 1000
 
         return QueryResponse(
@@ -208,7 +207,6 @@ def build_knowledge_graph(results):
     nodes = []
     edges = []
 
-    # Create nodes
     for i, result in enumerate(results):
         nodes.append(GraphNode(
             id=result['chunk_id'],
@@ -217,7 +215,6 @@ def build_knowledge_graph(results):
             size=max(20, result['relevance'] * 40)
         ))
 
-    # Create edges
     for i in range(len(nodes)):
         for j in range(i + 1, len(nodes)):
             edges.append(GraphEdge(
