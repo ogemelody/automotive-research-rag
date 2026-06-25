@@ -13,3 +13,10 @@ automotive and electric vehicle research papers.
 - Performs hybrid retrieval (semantic + keyword search)
 - Get synthesize grounded answers
 - Cites sources with paper references
+
+## To test
+### Ingest papers
+python scripts/ingest_all.py
+
+#### Query system
+python scripts/query.py "What are thermal management challenges?"
