@@ -38,13 +38,13 @@ st.markdown("""
 col1, col2 = st.columns([0.7, 0.3])
 with col1:
     st.markdown("# 🚗⚡ AutoRAG")
-    st.markdown("**AI-Powered Automotive Research Assistant**")
+    st.markdown("**Semantic Intelligence for Automotive Research**")
 
 with col2:
     st.markdown("""
     <div style="text-align: right;">
         <p style="color: #10b981; font-weight: bold;">🟢 Offline Mode (Ollama)</p>
-        <p style="color: #64748b; font-size: 12px;">19 papers indexed</p>
+        <p style="color: #64748b; font-size: 12px;">Built by MelodyEgwuchukwu🩷</p>
     </div>
     """, unsafe_allow_html=True)
 
@@ -77,9 +77,9 @@ with st.sidebar:
     st.markdown("### 📖 About")
     st.info(
         """
-        AutoRAG retrieves relevant papers and uses Ollama to synthesize answers.
+        AutoRAG combines semantic search (BAAI/bge embeddings + Chroma vector DB) with local Ollama LLM to retrieve relevant research papers and generate grounded answers with source citations for automotive and electric vehicle research questions.
 
-        **No API costs • Runs locally • Fully offline**
+        **No API costs • Runs locally**
         """
     )
 
@@ -188,7 +188,7 @@ st.markdown("""
 ---
 **Built with Streamlit • Powered by AutoRAG • Running locally with Ollama**
 
-[API Documentation](http://localhost:8000/docs) • [Ollama](https://ollama.ai)
+ [Connect with Melody](https://www.linkedin.com/in/melodyegwuchukwu/) • [Ollama](https://ollama.ai)
 """)
 
 
