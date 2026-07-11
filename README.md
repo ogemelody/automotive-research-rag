@@ -2,7 +2,7 @@
 # AutoRAG: Semantic Intelligence for Automotive Research
 
  Retrieval-Augmented Generation system for analyzing 
-automotive and electric vehicle research papers.
+automotive and electric vehicle research papers.Then uses local Ollama to synthesize intelligent, cited answers to your technical questions.
 
 **Ask intelligent questions. Get grounded answers with citations.**
 
@@ -14,6 +14,7 @@ automotive and electric vehicle research papers.
 - Get synthesize grounded answers
 - Cites sources with paper references
 
+![Demo](./assets/demo.gif)
 ## To test
 ### Ingest papers
 python scripts/ingest_all.py
