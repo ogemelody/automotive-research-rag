@@ -4,7 +4,27 @@
       "file_hash": "3ec7cc6db6bbb576b7d324fa288b4cab",
       "processed_at": "2026-06-16T13:40:53.924884",
       "chunks": 19
+    },
+    "Accurate_gradient_computations_for_shape_optimization_via_discrete_adjoints_in_CFD-related_multiphysics_problems.pdf": {
+      "file_hash": "996070c69feca3c3437340dd3e713c41",
+      "processed_at": "2026-07-01T12:06:22.901006",
+      "chunks": 9
+    },
+    "Emission_Aware_Reinforcement_Learning_for_Sustainable_Electric_Vehicle_Charging_and_Carbon_Dioxide_Reduction_Under_Varying_Renewable_Penetration.pdf": {
+      "file_hash": "540839a264e619c7beb43c53782fd13c",
+      "processed_at": "2026-07-01T12:06:55.353871",
+      "chunks": 41
+    },
+    "Fuzzing_REST_APIs_in_Industry-_Necessary_Features_and_Open_Problems.pdf": {
+      "file_hash": "82fa116798156c905c7637417f0de4a0",
+      "processed_at": "2026-07-01T12:07:30.577315",
+      "chunks": 50
+    },
+    "Quantifying_Urban_Road_Network_Vulnerability_and_Resilience_to_Attacks.pdf": {
+      "file_hash": "de785c275451eb994665002993f418d9",
+      "processed_at": "2026-07-01T12:07:42.368173",
+      "chunks": 12
     }
   },
-  "last_updated": "2026-06-16T13:40:53.924913"
+  "last_updated": "2026-07-01T12:07:42.368201"
 }
