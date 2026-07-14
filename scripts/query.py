@@ -6,9 +6,10 @@ from pathlib import Path
 sys.path.insert(0, str(Path(__file__).parent.parent))
 
 from dotenv import load_dotenv
+
 load_dotenv()
 
-import anthropic
+import requests
 from src.embeddings.generate_embeddings import EmbeddingGenerator
 from src.embeddings.chroma_setup import ChromaVectorDB
 
@@ -39,20 +40,12 @@ def query_papers(question: str, n_results: int = 5) -> str:
     for i, (doc, meta, dist) in enumerate(zip(documents, metadatas, distances)):
         paper_id = meta.get("paper_id", "unknown")
         similarity = 1 - dist
-        context_parts.append(f"[Source {i+1} | {paper_id} | similarity: {similarity:.2f}]\n{doc}")
+        context_parts.append(f"[Source {i + 1} | {paper_id} | similarity: {similarity:.2f}]\n{doc}")
 
     context = "\n\n---\n\n".join(context_parts)
 
-    client = anthropic.Anthropic(api_key=os.environ["ANTHROPIC_API_KEY"])
-
-    print("Generating analysis...\n")
-    message = client.messages.create(
-        model="claude-sonnet-4-6",
-        max_tokens=1024,
-        messages=[
-            {
-                "role": "user",
-                "content": f"""You are an automotive research assistant. Answer the question below using ONLY the provided research paper excerpts. Cite which source each point comes from.
+    # Prepare the prompt for Ollama
+    prompt = f"""You are an automotive research assistant. Answer the question below using ONLY the provided research paper excerpts. Cite which source each point comes from.
 
 Question: {question}
 
@@ -60,11 +53,41 @@ Research excerpts:
 {context}
 
 Provide a clear, structured answer based on the sources above."""
-            }
-        ]
-    )
 
-    return message.content[0].text
+    # Query Ollama
+    ollama_url = os.environ.get("OLLAMA_API_URL", "http://localhost:11434")
+
+    print("Generating analysis...\n")
+
+    try:
+        response = requests.post(
+            f"{ollama_url}/api/generate",
+            json={
+                "model": "mistral",
+                "prompt": prompt,
+                "stream": False,
+                "temperature": 0.5,
+                "top_p": 0.9,
+                "top_k": 40,
+            }
+        )
+
+        if response.status_code == 200:
+            result = response.json()
+            return result.get("response", "No response generated.")
+        else:
+            return f"Error querying Ollama: {response.status_code} - {response.text}"
+
+    except requests.exceptions.ConnectionError:
+        return (
+            "Error: Could not connect to Ollama.\n"
+            "Make sure Ollama is running:\n"
+            "1. Install Ollama from https://ollama.ai\n"
+            "2. Run: ollama serve\n"
+            "3. In another terminal, pull the model: ollama pull mistral"
+        )
+    except Exception as e:
+        return f"Error generating response: {str(e)}"
 
 
 def main():
